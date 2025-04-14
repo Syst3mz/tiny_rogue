@@ -2,6 +2,7 @@
 #![cfg_attr(not(test), no_std)]
 
 mod ascii_renderer;
+mod button_input;
 
 extern crate alloc;
 
@@ -28,10 +29,11 @@ use pd::fs::Path;
 use game_logic::Game;
 use game_logic::renderer::Renderer;
 use crate::ascii_renderer::AsciiRenderer;
+use crate::button_input::ButtonInput;
 
 /// Game state
 struct State {
-	game: Game<AsciiRenderer>,
+	game: Game<AsciiRenderer, ButtonInput>,
 }
 
 
@@ -45,7 +47,7 @@ impl State {
 		set_font(&font);
 
 		Self {
-			game: Game::new(AsciiRenderer::default()),
+			game: Game::new(AsciiRenderer::default(), ButtonInput::default()),
 		}
 	}
 
@@ -75,13 +77,13 @@ impl Update for State {
 	/// Updates the state
 	fn update(&mut self) -> UpdateCtrl {
 		clear(Color::WHITE);
-
-		self.game.renderer.render(&mut ());
-
 		// TODO: update the state of game
 
-		// System::Default().draw_fps(0, 0);
+		self.game.update();
 
+		System::Default().draw_fps(0, 0);
+
+		self.game.renderer.render(&mut ());
 		UpdateCtrl::Continue
 	}
 }

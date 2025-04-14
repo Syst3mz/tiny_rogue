@@ -54,5 +54,17 @@ pub trait Renderer {
         self.line(top_left + span_y, bottom_right, with.clone());
         self.line(top_left, top_left + span_y, with.clone());
     }
+
+    fn print(&mut self, string: impl AsRef<str>, at: Vector2<usize>) {
+        let mut x_position = at.x;
+        for char in string.as_ref().chars() {
+            if x_position >= self.width() {
+                return;
+            }
+
+            self.set_pixel(Vector2::new(x_position, at.y), char);
+            x_position += 1;
+        }
+    }
     fn render<RenderingContext>(&mut self, rendering_context: &mut RenderingContext);
 }

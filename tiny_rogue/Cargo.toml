@@ -17,6 +17,7 @@ playdate = "*"
 game_logic = {path = "game_logic"}
 libm = "0.2.11"
 simple_vector2 = "2.1.4"
+shared = {path = "shared" }
 
 
 # Playdate Package Info
