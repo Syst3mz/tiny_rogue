@@ -1,0 +1,11 @@
+[package]
+name = "game_logic"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+line_drawing = "^1.0.1"
+simple_vector2 = "^2.1.5"
+rand = {version = "^0.9.0", default-features = false, features = ["small_rng"]}
+shared = {path = "../shared" }
+hashbrown = {version = "0.15.2", default-features = false, features = []}
