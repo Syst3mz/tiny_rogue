@@ -1,4 +1,3 @@
-use core::ops::Range;
 use line_drawing::Bresenham;
 use simple_vector2::Vector2;
 use crate::conversions::Vector2ToTuple;
@@ -9,7 +8,7 @@ pub trait Renderer {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn clear(&mut self, with: Option<char>);
-    fn bounds(&self) -> Vector2<usize> {
+    fn size(&self) -> Vector2<usize> {
         Vector2::new(self.width(), self.height())
     }
     fn last_valid_indices(&self) -> Vector2<usize> {

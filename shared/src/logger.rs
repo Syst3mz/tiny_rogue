@@ -1,5 +1,6 @@
 use alloc::collections::VecDeque;
 use alloc::string::{String, ToString};
+use core::cell::UnsafeCell;
 use core::fmt::Display;
 
 #[derive(Debug, Copy, Clone)]
@@ -25,25 +26,39 @@ impl Display for LogMessage {
 }
 
 pub struct Logger {
-    message_list: VecDeque<LogMessage>,
+    message_list: UnsafeCell<VecDeque<LogMessage>>,
 }
 
 impl Logger {
-    pub fn new() -> Logger {
+    pub const fn new() -> Logger {
         Self {
-            message_list: VecDeque::new(),
+            message_list: UnsafeCell::new(VecDeque::new()),
+        }
+    }
+    
+    pub fn message(&self, level: LogLevel, message: impl AsRef<str>) {
+        unsafe {
+            (*self.message_list.get()).push_back(LogMessage {
+                log_level: level,
+                message: message.as_ref().to_string()
+            })
         }
     }
 
-    pub fn debug(&mut self, message: impl AsRef<str>) {
-        self.message_list.push_back(LogMessage { log_level: LogLevel::Debug, message: message.as_ref().to_string() })
+    pub fn debug(&self, message: impl AsRef<str>) {
+        self.message(LogLevel::Debug, message);       
     }
 
-    pub fn error(&mut self, message: impl AsRef<str>) {
-        self.message_list.push_back(LogMessage { log_level: LogLevel::Error, message: message.as_ref().to_string() })
+    pub fn error(&self, message: impl AsRef<str>) {
+        self.message(LogLevel::Error, message);
     }
 
-    pub fn first_message(&mut self) -> Option<LogMessage> {
-        self.message_list.remove(0)
+    pub fn next_message(&self) -> Option<LogMessage> {
+        unsafe {
+            (*self.message_list.get()).pop_front()
+        }
     }
 }
+
+unsafe impl Send for Logger {}
+unsafe impl Sync for Logger {}

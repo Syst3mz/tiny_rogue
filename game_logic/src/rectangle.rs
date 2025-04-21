@@ -1,5 +1,7 @@
 use core::fmt::Display;
 use core::ops::{Add, Mul};
+use rand::distr::uniform::SampleUniform;
+use rand::Rng;
 use simple_vector2::Vector2;
 
 #[derive(Debug, Clone, Copy)]
@@ -17,6 +19,15 @@ impl<T: Display> Display for Rectangle<T> {
 impl<T> Rectangle<T> {
     pub fn new(top_left: Vector2<T>, size: Vector2<T>) -> Self {
         Self { top_left, size }
+    }
+}
+
+impl<T: Clone+SampleUniform+Add<Output=T>+PartialOrd> Rectangle<T> {
+    fn rand_inside(&self, rng: &mut impl Rng) -> Vector2<T> {
+        Vector2::new(
+            rng.random_range(self.top_left.x.clone()..self.top_left.x.clone() + self.size.x.clone()), 
+            rng.random_range(self.top_left.y.clone()..self.top_left.y.clone() + self.size.y.clone())
+        )
     }
 }
 
@@ -38,26 +49,13 @@ impl<T: Add<Output=T>+Mul<Output=T>+Clone> Rectangle<T> {
 }
 impl<T: Clone+PartialOrd+Add<Output=T>> Rectangle<T> {
     pub fn contains(&self, other: &Self) -> bool {
-        if self.top_left.x > other.top_left.x { 
-            return false;
-        }
-        
-        if self.top_left.y > other.top_left.y {
-            return false;
-        }
-        
+        let self_bottom_right = self.bottom_right();
         let other_bottom_right = other.bottom_right();
-        let self_bottom_right = self.top_right();
-        
-        if other_bottom_right.x > self_bottom_right.x {
-            return false;
-        }
-        
-        if other_bottom_right.y > self_bottom_right.y {
-            return false;
-        }
-        
-        true
+
+        self.top_left.x <= other.top_left.x
+            && self.top_left.y <= other.top_left.y
+            && self_bottom_right.x >= other_bottom_right.x
+            && self_bottom_right.y >= other_bottom_right.y
     }
     pub fn within(&self, other: &Self) -> bool {
         other.contains(self)

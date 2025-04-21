@@ -1,6 +1,4 @@
 use alloc::string::String;
-use core::mem;
-use core::ops::Range;
 use pd::graphics::text::draw_text;
 use simple_vector2::Vector2;
 use shared::constants::{DRAWING_BUFFER_SIZE, SCREEN_SIZE};

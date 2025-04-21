@@ -9,3 +9,10 @@ pub const MAP_SIZE: Vector2<usize> = Vector2::new(80, 24);
 pub const MAP_BUFFER_SIZE: usize = MAP_SIZE.x * MAP_SIZE.y;
 pub const MAZE_SIZE: Vector2<usize> = Vector2::new((MAP_SIZE.x - 2) / 2, (MAP_SIZE.y - 2) / 2);
 pub const MAZE_BUFFER_SIZE: usize = MAZE_SIZE.x * MAZE_SIZE.y;
+
+pub const MAX_ROOM_SIZE: Vector2<usize> = Vector2::new(MAP_SIZE.x / 3, MAP_SIZE.y / 3);
+pub const MIN_ROOM_SIZE: Vector2<usize> = Vector2::new(5, 5);
+// The buffer size also happens to the area of the map. 
+// I figure I want about 80 percent of the map to be room space.
+pub const DESIRED_ROOM_COVERAGE: usize = 4 * (MAZE_BUFFER_SIZE / 5);
+pub const ROOM_PLACEMENT_ATTEMPTS: usize = 100;

@@ -17,7 +17,7 @@ use pd::graphics::*;
 use pd::graphics::text::*;
 use pd::graphics::bitmap::*;
 use pd::system::prelude::*;
-use game_logic::Game;
+use game_logic::{Game, LOGGER};
 use game_logic::renderer::Renderer;
 use crate::ascii_renderer::AsciiRenderer;
 use crate::button_input::ButtonInput;
@@ -71,7 +71,7 @@ impl Update for State {
 		// TODO: update the state of game
 
 		self.game.update();
-		while let Some(message) = self.game.logger.first_message() {
+		while let Some(message) = LOGGER.next_message() {
 			println!("{}", message);
 		}
 
