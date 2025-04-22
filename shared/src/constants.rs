@@ -15,4 +15,5 @@ pub const MIN_ROOM_SIZE: Vector2<usize> = Vector2::new(5, 5);
 // The buffer size also happens to the area of the map. 
 // I figure I want about 80 percent of the map to be room space.
 pub const DESIRED_ROOM_COVERAGE: usize = 4 * (MAZE_BUFFER_SIZE / 5);
-pub const ROOM_PLACEMENT_ATTEMPTS: usize = 100;
+pub const PLACEMENT_ATTEMPTS: usize = 100;
+pub const MAX_STAIRS: usize = 5;

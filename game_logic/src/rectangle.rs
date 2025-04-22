@@ -23,11 +23,20 @@ impl<T> Rectangle<T> {
 }
 
 impl<T: Clone+SampleUniform+Add<Output=T>+PartialOrd> Rectangle<T> {
-    fn rand_inside(&self, rng: &mut impl Rng) -> Vector2<T> {
+    pub fn rand_inside(&self, rng: &mut impl Rng) -> Vector2<T> {
         Vector2::new(
             rng.random_range(self.top_left.x.clone()..self.top_left.x.clone() + self.size.x.clone()), 
             rng.random_range(self.top_left.y.clone()..self.top_left.y.clone() + self.size.y.clone())
         )
+    }
+}
+
+impl Rectangle<usize> {
+    pub fn shrink(&self) -> Rectangle<usize> {
+        Self {
+            top_left: self.top_left + Vector2::new(1, 1),
+            size: self.size - Vector2::new(2, 2),
+        }
     }
 }
 

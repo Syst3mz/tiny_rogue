@@ -4,16 +4,17 @@ use hashbrown::HashSet;
 use rand::prelude::IndexedRandom;
 use rand::Rng;
 use shared::array_2d::Array2d;
-use shared::constants::{DESIRED_ROOM_COVERAGE, MAP_BUFFER_SIZE, MAP_SIZE, MAX_ROOM_SIZE, MIN_ROOM_SIZE, ROOM_PLACEMENT_ATTEMPTS};
+use shared::constants::{DESIRED_ROOM_COVERAGE, MAP_BUFFER_SIZE, MAP_SIZE, MAX_ROOM_SIZE, MAX_STAIRS, MIN_ROOM_SIZE, PLACEMENT_ATTEMPTS};
 use simple_vector2::Vector2;
 use crate::rectangle::Rectangle;
 use crate::LOGGER;
 use crate::map::Tile::{Floor, Wall};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Tile {
     Wall,
     Floor,
+    Stairs(u64)
 }
 
 impl Tile {
@@ -26,8 +27,9 @@ impl Tile {
 
     pub fn as_char(&self) -> char {
         match self {
-            Wall => '#',
-            Floor => '.',
+            Tile::Wall => '#',
+            Tile::Floor => '.',
+            Tile::Stairs(_) => 'V',
         }
     }
 }
@@ -43,6 +45,19 @@ impl Map {
             grid: Array2d::new([Floor; MAP_BUFFER_SIZE], MAP_SIZE),
             rooms: Vec::new(),
         }
+    }
+    
+    pub fn get_tile_at(&self, point: Vector2<usize>) -> Option<Tile> {
+        self.grid.get_pixel(point).map(|x| *x)
+    }
+    
+    pub fn tile_can_be_moved_into(&self, point: Vector2<usize>) -> bool {
+        let index = self.grid.index_at(point);
+        if index >= MAP_BUFFER_SIZE {
+            return false;
+        }
+        
+        !self.grid[index].is_wall()
     }
     
     fn random_point_on_map(rng: &mut impl Rng) -> Vector2<usize> {
@@ -89,6 +104,12 @@ impl Map {
         self.grid.clear(Wall);
         self.generate_maze(rng);
         self.generate_rooms(rng);
+
+        for _ in 1..=MAX_STAIRS {
+            let Some(room) = self.rooms.choose(rng) else { continue; };
+            let stair_index = self.grid.index_at(room.shrink().rand_inside(rng));
+            self.grid[stair_index] = Tile::Stairs(rng.random())
+        }
     }
     
     pub fn generate_maze(&mut self, rng: &mut impl Rng) {
@@ -171,7 +192,7 @@ impl Map {
     }
     
     pub fn generate_and_place_room(&mut self, rng: &mut impl Rng) {
-        let mut attempts = ROOM_PLACEMENT_ATTEMPTS;
+        let mut attempts = PLACEMENT_ATTEMPTS;
         while attempts > 0 {
             let room = Rectangle::new(
                 Self::random_point_on_map(rng),
@@ -190,7 +211,7 @@ impl Map {
         }
         
         if attempts == 0 { 
-            LOGGER.error(format!("Failed to place a room on the map after {} attempts!", ROOM_PLACEMENT_ATTEMPTS));
+            LOGGER.error(format!("Failed to place a room on the map after {} attempts!", PLACEMENT_ATTEMPTS));
         }
     }
     
