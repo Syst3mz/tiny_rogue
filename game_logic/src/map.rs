@@ -52,12 +52,8 @@ impl Map {
     }
     
     pub fn tile_can_be_moved_into(&self, point: Vector2<usize>) -> bool {
-        let index = self.grid.index_at(point);
-        if index >= MAP_BUFFER_SIZE {
-            return false;
-        }
-        
-        !self.grid[index].is_wall()
+        let Some(tile) = self.grid.get_pixel(point) else { return false; };
+        !tile.is_wall()
     }
     
     fn random_point_on_map(rng: &mut impl Rng) -> Vector2<usize> {
@@ -107,7 +103,7 @@ impl Map {
 
         for _ in 1..=MAX_STAIRS {
             let Some(room) = self.rooms.choose(rng) else { continue; };
-            let stair_index = self.grid.index_at(room.shrink().rand_inside(rng));
+            let stair_index = self.grid.index_at(room.shrink(1).rand_inside(rng));
             self.grid[stair_index] = Tile::Stairs(rng.random())
         }
     }

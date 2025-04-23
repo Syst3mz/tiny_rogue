@@ -3,22 +3,22 @@ extern crate alloc;
 
 use alloc::{format, vec};
 use alloc::vec::Vec;
+use hashbrown::HashSet;
 use rand::prelude::{IndexedRandom, SmallRng};
 use rand::{Rng, RngCore, SeedableRng};
 use simple_vector2::Vector2;
-use shared::constants::{MAP_SIZE, SCREEN_SIZE};
+use shared::constants::SCREEN_SIZE;
 use shared::logger::Logger;
 use crate::camera::Camera;
 use crate::damage_taker::DamageTaker;
 use crate::drawable::Drawable;
-use crate::entities::Entity;
-use crate::entities::gold_pile::GoldPile;
+use crate::entities::item::Item;
 use crate::entities::player::Player;
-use crate::entities::rat::Rat;
+use crate::entities::enemy::{Attack, Enemy};
 use crate::input::{Button, Input};
+use crate::located::Located;
 use crate::map::{Map, Tile};
-use crate::placeable::Placeable;
-use crate::player_hunter::PlayerTracker;
+use crate::placement_director::PlacementDirector;
 use crate::renderer::Renderer;
 
 pub mod renderer;
@@ -27,11 +27,11 @@ pub mod input;
 mod map;
 mod camera;
 mod rectangle;
-mod placeable;
 mod entities;
 mod drawable;
-mod player_hunter;
 mod damage_taker;
+mod placement_director;
+mod located;
 
 pub static LOGGER: Logger = Logger::new();
 
@@ -41,8 +41,8 @@ pub struct Game<Render: Renderer, Inp: Input> {
     map: Map,
     rng: SmallRng,
     player: Player,
-    rats: Vec<Rat>,
-    gold_piles: Vec<GoldPile>,
+    enemies: Vec<Located<Enemy>>,
+    items: Vec<Located<Item>>,
     camera: Camera,
 }
 impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
@@ -53,24 +53,21 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             map: Map::new(),
             rng: SmallRng::seed_from_u64(seed),
             player: Player::new(Vector2::new(1, 1)),
-            rats: vec![],
-            gold_piles: vec![],
+            enemies: vec![],
+            items: vec![],
             camera: Camera::new(Vector2::new(0, 0)),
         }
     }
     
     fn make_level(&mut self) {
+        self.enemies.clear();
+        self.items.clear();
         self.map.generate_map(&mut self.rng);
-        self.gold_piles.push(GoldPile::new(60, Vector2::new(2, 1)));
-        for _ in 0..30 {
-            let Some(gold_pile) = GoldPile::place(&self.map, &mut self.rng) else { continue };
-            self.gold_piles.push(GoldPile::new(self.rng.random_range(30..301), gold_pile))
-        }
-
-        for _ in 0..30 {
-            let Some(rat) = Rat::place(&self.map, &mut self.rng) else { continue };
-            self.rats.push(Rat::new(rat, self.rng.random_range(3..6)))
-        }
+        
+        let (items, enemies) = PlacementDirector::new(60, &mut self.rng).place_all(&self.map);
+        self.items = items;
+        self.enemies = enemies;
+        
         
         let Some(starting_room) = self.map.rooms.choose(&mut self.rng) else {return};
         self.player.position = starting_room.top_left + Vector2::new(1, 1);
@@ -153,10 +150,12 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
 
         Some(())
     }
-    fn move_entities(&mut self) {
-        /*for rat_index in 0..self.rats.len() {
-            self.rats[rat_index].move_self(&self.map, &mut self.rng, self.player.position)
-        }*/
+    fn update_enemies(&mut self) {
+        let impassable = self.collect_impassable();
+        
+        for enemy_index in 0..self.enemies.len() {
+            self.enemies[enemy_index].update(&self.map, &mut self.rng, &mut self.player, &impassable)
+        }
     }
     
     fn go_to_next_floor(&mut self) {
@@ -171,33 +170,41 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     }
     
     fn do_player_contact(&mut self) {
-        for rat_index in (0..self.rats.len()).rev() {
-            if self.player.position == self.rats[rat_index].world_space_position() { 
-                self.rats[rat_index].take_damage(self.player.attack);
-                self.player.take_damage(self.rats[rat_index].attack);
-                
-                if self.rats[rat_index].is_dead() { 
-                    self.rats.remove(rat_index);
-                }
+        for enemy in (0..self.enemies.len()).rev() {
+            if self.player.position != self.enemies[enemy].world_space_position() { 
+                continue;
+            }
+
+            self.enemies[enemy].take_damage(self.player.attack);
+
+            if self.enemies[enemy].is_dead() {
+                self.enemies.remove(enemy);
             }
         }
         
         
-        for gold_pile_index in (0..self.gold_piles.len()).rev() {
-            if self.gold_piles[gold_pile_index].world_space_position() == self.player.position {
-                self.player.score += self.gold_piles.remove(gold_pile_index).worth
+        for item_index in (0..self.items.len()).rev() {
+            if self.items[item_index].world_space_position() == self.player.position {
+                let item = self.items.remove(item_index);
+                item.unwrap().consume(&mut self.player)
             }
         }
     }
     
     fn write_entities_to_renderer(&mut self) {
-        for rat in self.rats.iter() {
-            self.renderer.set_pixel(rat.world_space_position(), rat.as_char());
+        for items in self.items.iter() {
+            let Some(transformed_item_position) = self.camera.transform_world_to_camera(items.world_space_position()) else { continue };
+            self.renderer.set_pixel(transformed_item_position, items.as_char());
         }
 
-        for gold_pile in self.gold_piles.iter() {
-            self.renderer.set_pixel(gold_pile.world_space_position(), gold_pile.as_char());
+        for enemy in self.enemies.iter() {
+            let Some(enemy_position) = self.camera.transform_world_to_camera(enemy.world_space_position()) else { continue };
+            self.renderer.set_pixel(enemy_position, enemy.as_char());
         }
+    }
+    
+    fn collect_impassable(&self) -> HashSet<Vector2<usize>> {
+        HashSet::from_iter(self.enemies.iter().map(|x| x.world_space_position()))
     }
 
     pub fn update(&mut self) {
@@ -209,9 +216,11 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
                 _ => {}
             }
             
-            self.player.move_player(&self.map, player_input);
+            self.player.move_player(&self.map, player_input, self.collect_impassable());
+            self.camera.track_player(self.player.position);
 
-            self.move_entities();
+            self.update_enemies();
+            
             self.do_player_contact();   
         }
         

@@ -25,17 +25,17 @@ impl<T> Rectangle<T> {
 impl<T: Clone+SampleUniform+Add<Output=T>+PartialOrd> Rectangle<T> {
     pub fn rand_inside(&self, rng: &mut impl Rng) -> Vector2<T> {
         Vector2::new(
-            rng.random_range(self.top_left.x.clone()..self.top_left.x.clone() + self.size.x.clone()), 
-            rng.random_range(self.top_left.y.clone()..self.top_left.y.clone() + self.size.y.clone())
+            rng.random_range(self.top_left.x.clone()..=self.top_left.x.clone() + self.size.x.clone()), 
+            rng.random_range(self.top_left.y.clone()..=self.top_left.y.clone() + self.size.y.clone())
         )
     }
 }
 
 impl Rectangle<usize> {
-    pub fn shrink(&self) -> Rectangle<usize> {
+    pub fn shrink(&self, by: usize) -> Rectangle<usize> {
         Self {
-            top_left: self.top_left + Vector2::new(1, 1),
-            size: self.size - Vector2::new(2, 2),
+            top_left: self.top_left + Vector2::new(by, by),
+            size: self.size - Vector2::new(2 * by, 2 * by),
         }
     }
 }
@@ -73,6 +73,8 @@ impl<T: Clone+PartialOrd+Add<Output=T>> Rectangle<T> {
 
 #[cfg(test)]
 mod tests {
+    use rand::prelude::SmallRng;
+    use rand::SeedableRng;
     use shared::constants::MAP_SIZE;
     use super::*;
 
@@ -95,5 +97,27 @@ mod tests {
         let map = Rectangle::new(Vector2::new(0, 0), MAP_SIZE - Vector2::new(1, 1));
         let room = Rectangle::new(Vector2::new(62, 19), Vector2::new(25, 5));
         assert!(!map.within(&room));
+    }
+    
+    #[test]
+    fn rand_inside() {
+        let min = Vector2::new(0, 0);
+        let max = Vector2::new(16, 16);
+        let room = Rectangle::new(min, max - min);
+        let mut rng = SmallRng::seed_from_u64(0);
+        
+        for _ in 0..1000 {
+            let rand_inside = room.rand_inside(&mut rng);
+            assert!(min.x <= rand_inside.x && rand_inside.x <= max.x);
+            assert!(min.y <= rand_inside.y && rand_inside.y <= max.y);
+        }
+    }
+    
+    #[test]
+    fn shrink() {
+        let room = Rectangle::new(Vector2::new(0, 0), Vector2::new(16, 16));
+        let shrinked = room.shrink(1);
+        assert_eq!(shrinked.top_left, Vector2::new(1, 1));
+        assert_eq!(shrinked.size, Vector2::new(14, 14));
     }
 }

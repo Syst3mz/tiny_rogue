@@ -3,7 +3,7 @@ use shared::constants::MAP_SIZE;
 use crate::damage_taker::DamageTaker;
 use crate::drawable::Drawable;
 use crate::input;
-use crate::input::{Button, Input};
+use crate::input::Button;
 use crate::map::Map;
 
 pub struct Player {
@@ -11,7 +11,8 @@ pub struct Player {
     pub health: u16,
     pub score: u32,
     pub attack: u16,
-    pub defense: u16
+    pub defense: u16,
+    levels_completed: u32,
 }
 
 impl Player {
@@ -22,10 +23,11 @@ impl Player {
             score: 0,
             attack: 3,
             defense: 2,
+            levels_completed: 0,
         }
     }
 
-    fn desired_move(&self, button: input::Button) -> Option<Vector2<usize>> {
+    fn desired_move(&self, button: Button) -> Option<Vector2<usize>> {
         let mut desire = self.position;
 
         // since I just move the player, we invert directions.
@@ -45,15 +47,25 @@ impl Player {
         Some(desire)
     }
 
-    pub fn move_player(&mut self, on: &Map, pressed_button: Button) -> Option<()> {
+    pub fn move_player(&mut self, on: &Map, pressed_button: Button, impassible_positions: impl IntoIterator<Item=Vector2<usize>>) -> Option<()> {
         let desire = self.desired_move(pressed_button)?;
         
         if !on.tile_can_be_moved_into(desire) {
             return None;
         }
+        
+        for impassable_position in impassible_positions {
+            if impassable_position == desire { 
+                return None;
+            }
+        }
 
         self.position = desire;
         Some(())
+    }
+    
+    pub fn increase_score(&mut self, by: u32) {
+        self.score += (self.levels_completed / 2).max(1) * by;
     }
 }
 
