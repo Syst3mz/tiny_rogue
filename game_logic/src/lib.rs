@@ -2,23 +2,24 @@
 extern crate alloc;
 
 use alloc::{format, vec};
+use alloc::string::ToString;
 use alloc::vec::Vec;
 use hashbrown::HashSet;
 use rand::prelude::{IndexedRandom, SmallRng};
-use rand::{Rng, RngCore, SeedableRng};
+use rand::SeedableRng;
 use simple_vector2::Vector2;
-use shared::constants::SCREEN_SIZE;
+use shared::constants::{LEVEL_BASE_ENEMY_BUDGET, LEVEL_BASE_ITEM_BUDGET, SCREEN_SIZE};
 use shared::logger::Logger;
 use crate::camera::Camera;
 use crate::damage_taker::DamageTaker;
 use crate::drawable::Drawable;
 use crate::entities::item::Item;
 use crate::entities::player::Player;
-use crate::entities::enemy::{Attack, Enemy};
+use crate::entities::enemy::Enemy;
 use crate::input::{Button, Input};
 use crate::located::Located;
 use crate::map::{Map, Tile};
-use crate::placement_director::PlacementDirector;
+use crate::placement_director::{PlacementDirector, PlacementMode};
 use crate::renderer::Renderer;
 
 pub mod renderer;
@@ -32,6 +33,8 @@ mod drawable;
 mod damage_taker;
 mod placement_director;
 mod located;
+mod placeable;
+mod spawn_table_entry;
 
 pub static LOGGER: Logger = Logger::new();
 
@@ -44,6 +47,7 @@ pub struct Game<Render: Renderer, Inp: Input> {
     enemies: Vec<Located<Enemy>>,
     items: Vec<Located<Item>>,
     camera: Camera,
+    game_over: bool,
 }
 impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     pub fn new(renderer: Render, input: Inp, seed: u64) -> Game<Render, Inp> {
@@ -56,6 +60,7 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             enemies: vec![],
             items: vec![],
             camera: Camera::new(Vector2::new(0, 0)),
+            game_over: false,
         }
     }
     
@@ -63,14 +68,21 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
         self.enemies.clear();
         self.items.clear();
         self.map.generate_map(&mut self.rng);
-        
-        let (items, enemies) = PlacementDirector::new(60, &mut self.rng).place_all(&self.map);
-        self.items = items;
-        self.enemies = enemies;
+        let level = (self.player.levels_completed + 1) as usize;
+        LOGGER.debug(format!("Generating level {}", level));
+        self.items = PlacementDirector::new(level * LEVEL_BASE_ITEM_BUDGET, &mut self.rng, PlacementMode::RandomInRoom)
+            .place_all(&self.map);
+        self.enemies = PlacementDirector::new(level * LEVEL_BASE_ENEMY_BUDGET, &mut self.rng, PlacementMode::RandomFloorTile
+        ).place_all(&self.map);
         
         
         let Some(starting_room) = self.map.rooms.choose(&mut self.rng) else {return};
         self.player.position = starting_room.top_left + Vector2::new(1, 1);
+        for tile in self.map.grid.cardinal_neighbors(self.player.position) {
+            let Some(tile) = tile else { continue };
+            let Some(tile) = self.map.grid.get_pixel_mut(tile) else { continue };
+            *tile = Tile::Floor;
+        }
         self.camera.track_player(self.player.position);
     }
 
@@ -142,12 +154,16 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
         let transformed_position = self.transform_player_position()?;
         let reversed = transformed_position.y < SCREEN_SIZE.y / 2;
 
-        let lines = [
-            format!("Health: {}, Score: {}", self.player.health, self.player.score),
-        ];
+        // todo: Make this less horrifying on the performance front.
+        let mut lines = vec![];
+        for log in self.player.get_log() {
+            lines.push(log.to_string())
+        }
+        
+        lines.push(format!("Health: {}, Score: {}", self.player.health, self.player.score));
+        
 
         self.write_lines(&lines, reversed);
-
         Some(())
     }
     fn update_enemies(&mut self) {
@@ -165,6 +181,7 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             _ => return,
         };
 
+        self.player.levels_completed += 1;
         self.rng = SmallRng::seed_from_u64(new_floor_seed);
         self.make_level();
     }
@@ -175,10 +192,12 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
                 continue;
             }
 
-            self.enemies[enemy].take_damage(self.player.attack);
+            self.enemies[enemy].take_damage(self.player.attack, "Player");
+            self.player.log_message(format!("Dealt {} to {}", self.player.attack, self.enemies[enemy].name()));
 
             if self.enemies[enemy].is_dead() {
-                self.enemies.remove(enemy);
+                let enemy = self.enemies.remove(enemy);
+                self.player.increase_score(enemy.worth)
             }
         }
         
@@ -186,6 +205,7 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
         for item_index in (0..self.items.len()).rev() {
             if self.items[item_index].world_space_position() == self.player.position {
                 let item = self.items.remove(item_index);
+                self.player.log_message(format!("Picked up {}", item.name));
                 item.unwrap().consume(&mut self.player)
             }
         }
@@ -208,6 +228,15 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     }
 
     pub fn update(&mut self) {
+        if self.player.is_dead() {
+            self.game_over = true;
+            return;
+        }
+        
+        if self.game_over {
+            return;
+        }
+        
         let player_input = self.input.button_down();
         if let Some(player_input) = player_input {
             // drop the player down a floor if they are on the stairs

@@ -40,6 +40,7 @@ impl Rectangle<usize> {
     }
 }
 
+#[allow(dead_code)]
 impl<T: Add<Output=T>+Clone> Rectangle<T> {
     pub fn top_right(&self) -> Vector2<T> {
         Vector2::new(self.top_left.x.clone() + self.size.x.clone(), self.top_left.y.clone())
@@ -56,6 +57,8 @@ impl<T: Add<Output=T>+Mul<Output=T>+Clone> Rectangle<T> {
         self.size.x.clone() * self.size.y.clone()
     }
 }
+
+#[allow(dead_code)]
 impl<T: Clone+PartialOrd+Add<Output=T>> Rectangle<T> {
     pub fn contains(&self, other: &Self) -> bool {
         let self_bottom_right = self.bottom_right();

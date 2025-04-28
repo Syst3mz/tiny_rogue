@@ -17,10 +17,6 @@ impl AsciiRenderer {
             character_metrics,
         }
     }
-
-    pub fn index(&self, at: Vector2<usize>) -> usize {
-        at.y * SCREEN_SIZE.x + at.x
-    }
 }
 
 impl Renderer for AsciiRenderer {

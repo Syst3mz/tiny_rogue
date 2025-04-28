@@ -1,11 +1,13 @@
 use alloc::{format, vec};
 use alloc::vec::Vec;
 use hashbrown::HashSet;
+use line_drawing::Bresenham;
 use rand::prelude::IndexedRandom;
 use rand::Rng;
 use shared::array_2d::Array2d;
 use shared::constants::{DESIRED_ROOM_COVERAGE, MAP_BUFFER_SIZE, MAP_SIZE, MAX_ROOM_SIZE, MAX_STAIRS, MIN_ROOM_SIZE, PLACEMENT_ATTEMPTS};
 use simple_vector2::Vector2;
+use crate::conversions::Vector2ToTuple;
 use crate::rectangle::Rectangle;
 use crate::LOGGER;
 use crate::map::Tile::{Floor, Wall};
@@ -95,9 +97,25 @@ impl Map {
     fn get_point_between(a: Vector2<usize>, b: Vector2<usize>) -> Vector2<usize> {
         (a + b) / 2
     }
+    pub fn can_see(&self, from: Vector2<usize>, to: Vector2<usize>) -> bool {
+        let points_on_ray = Bresenham::new(
+            from.map(|x| x as isize).to_tuple(), 
+            to.map(|x| x as isize).to_tuple()
+        );
+
+        for (x, y) in points_on_ray {
+            let position = Vector2::new(x as usize, y as usize);
+            if !self.tile_can_be_moved_into(position) {
+                return false;
+            }
+        }
+        
+        true
+    }
 
     pub fn generate_map(&mut self, rng: &mut impl Rng) {
         self.grid.clear(Wall);
+        self.rooms.clear();
         self.generate_maze(rng);
         self.generate_rooms(rng);
 

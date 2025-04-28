@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 line_drawing = "^1.0.1"
 simple_vector2 = "^2.1.5"
-rand = {version = "^0.9.0", default-features = false, features = ["small_rng"]}
+rand = {version = "^0.9.0", default-features = false, features = ["small_rng", "alloc"] }
 shared = {path = "../shared" }
 hashbrown = {version = "0.15.2", default-features = false, features = ["default-hasher", "allocator-api2"]}
+strum = "0.27.1"

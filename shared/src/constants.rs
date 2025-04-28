@@ -17,3 +17,5 @@ pub const MIN_ROOM_SIZE: Vector2<usize> = Vector2::new(5, 5);
 pub const DESIRED_ROOM_COVERAGE: usize = 4 * (MAZE_BUFFER_SIZE / 5);
 pub const PLACEMENT_ATTEMPTS: usize = 100;
 pub const MAX_STAIRS: usize = 5;
+pub const LEVEL_BASE_ITEM_BUDGET: usize = 100;
+pub const LEVEL_BASE_ENEMY_BUDGET: usize = 30;

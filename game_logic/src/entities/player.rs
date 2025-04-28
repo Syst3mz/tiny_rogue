@@ -1,10 +1,29 @@
+use alloc::string::String;
+use alloc::{format, vec};
+use alloc::vec::Vec;
 use simple_vector2::Vector2;
 use shared::constants::MAP_SIZE;
 use crate::damage_taker::DamageTaker;
 use crate::drawable::Drawable;
-use crate::input;
 use crate::input::Button;
 use crate::map::Map;
+
+const LOG_SIZE: usize = 3;
+trait RunningLog {
+    fn log(&mut self, message: impl AsRef<str>);
+}
+
+impl RunningLog for Vec<String> {
+    fn log(&mut self, message: impl AsRef<str>) {
+        if self.len() < LOG_SIZE { 
+            self.push(String::from(message.as_ref()));
+            return;
+        }
+        
+        self.remove(0);
+        self.insert(LOG_SIZE - 1, String::from(message.as_ref()));
+    }
+}
 
 pub struct Player {
     pub position: Vector2<usize>,
@@ -12,7 +31,8 @@ pub struct Player {
     pub score: u32,
     pub attack: u16,
     pub defense: u16,
-    levels_completed: u32,
+    pub levels_completed: u32,
+    pub log: Vec<String>,
 }
 
 impl Player {
@@ -24,6 +44,7 @@ impl Player {
             attack: 3,
             defense: 2,
             levels_completed: 0,
+            log: vec![],
         }
     }
 
@@ -60,12 +81,24 @@ impl Player {
             }
         }
 
+        // clear the oldest log message.
+        if !self.log.is_empty() {
+            self.log.remove(0);
+        }
         self.position = desire;
         Some(())
     }
     
     pub fn increase_score(&mut self, by: u32) {
         self.score += (self.levels_completed / 2).max(1) * by;
+    }
+    
+    pub fn log_message(&mut self, message: impl AsRef<str>) {
+        self.log.log(message);
+    }
+    
+    pub fn get_log(&self) -> &Vec<String> {
+        &self.log
     }
 }
 
@@ -84,9 +117,9 @@ impl DamageTaker for Player {
         self.health == 0
     }
 
-    fn take_damage(&mut self, damage: u16) {
-        // apply my armour
+    fn take_damage(&mut self, damage: u16, source: impl AsRef<str>) {
         let damage = damage.saturating_sub(self.defense);
+        self.log.log(&format!("Took {} damage from {}", damage, source.as_ref()));
 
         if damage >= self.health {
             self.health = 0;
