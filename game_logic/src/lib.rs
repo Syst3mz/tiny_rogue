@@ -47,7 +47,6 @@ pub struct Game<Render: Renderer, Inp: Input> {
     enemies: Vec<Located<Enemy>>,
     items: Vec<Located<Item>>,
     camera: Camera,
-    game_over: bool,
 }
 impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     pub fn new(renderer: Render, input: Inp, seed: u64) -> Game<Render, Inp> {
@@ -60,11 +59,17 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             enemies: vec![],
             items: vec![],
             camera: Camera::new(Vector2::new(0, 0)),
-            game_over: false,
         }
     }
     
-    fn make_level(&mut self) {
+    pub fn is_game_over(&self) -> bool {
+        self.player.is_dead()
+    }
+    pub fn score(&self) -> u32 {
+        self.player.score    
+    }
+    
+    pub fn make_level(&mut self) {
         self.enemies.clear();
         self.items.clear();
         self.map.generate_map(&mut self.rng);
@@ -84,10 +89,6 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             *tile = Tile::Floor;
         }
         self.camera.track_player(self.player.position);
-    }
-
-    pub fn init(&mut self) {
-        self.make_level()
     }
 
     fn write_map_to_renderer(&mut self) {
@@ -228,15 +229,6 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     }
 
     pub fn update(&mut self) {
-        if self.player.is_dead() {
-            self.game_over = true;
-            return;
-        }
-        
-        if self.game_over {
-            return;
-        }
-        
         let player_input = self.input.button_down();
         if let Some(player_input) = player_input {
             // drop the player down a floor if they are on the stairs

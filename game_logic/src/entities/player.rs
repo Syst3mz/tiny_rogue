@@ -42,7 +42,7 @@ impl Player {
             health: 100,
             score: 0,
             attack: 3,
-            defense: 2,
+            defense: 0,
             levels_completed: 0,
             log: vec![],
         }
