@@ -9,6 +9,7 @@ extern crate alloc;
 extern crate playdate as pd;
 
 use alloc::format;
+use alloc::string::{String, ToString};
 use core::ptr::NonNull;
 use pd::controls::buttons::PDButtonsExt;
 use pd::controls::peripherals::Buttons;
@@ -20,16 +21,17 @@ use pd::graphics::*;
 use pd::graphics::text::*;
 use pd::graphics::bitmap::*;
 use pd::system::prelude::*;
+use simple_vector2::Vector2;
 use game_logic::{Game, LOGGER};
 use game_logic::renderer::Renderer;
-use shared::constants::FONT_METRICS;
+use shared::constants::{FONT_METRICS, SCREEN_SIZE_IN_PIXELS};
 use crate::ascii_renderer::AsciiRenderer;
 use crate::button_input::ButtonInput;
 
 enum GameState {
 	MainMenu,
 	Gameplay(Game<AsciiRenderer, ButtonInput>),
-	GameOver(u32),
+	GameOver(u32, String),
 }
 
 impl GameState {
@@ -46,19 +48,46 @@ impl GameState {
 			*self = GameState::initialize_game();
 		}
 	}
+
+	fn centered_paragraph(lines: &[impl AsRef<str>]) {
+		let longest_line_in_pixels = lines
+			.iter()
+			.map(|line| line.as_ref().len())
+			.max()
+			.unwrap();
+		let longest_line_in_pixels = longest_line_in_pixels * FONT_METRICS.x;
+		let paragraph_size = Vector2::new(longest_line_in_pixels, lines.len() * FONT_METRICS.y);
+		let paragraph_offset_in_pixels = paragraph_size / 2;
+		let paragraph_offset_in_pixels = (SCREEN_SIZE_IN_PIXELS / 2) - paragraph_offset_in_pixels;
+		
+		
+
+		for (line_index, line) in lines.iter().enumerate() {
+			let line = line.as_ref();
+			let line_in_pixels = line.len() * FONT_METRICS.x;
+			let line_indent = (longest_line_in_pixels - line_in_pixels) / 2;
+			let _ = draw_text(
+				line,
+				(paragraph_offset_in_pixels.x + line_indent) as i32,
+				(paragraph_offset_in_pixels.y + line_index * FONT_METRICS.y) as i32
+			);
+		}
+	}
 	
 	fn update(&mut self) {
 		match self {
 			GameState::MainMenu => {
-				let _ = draw_text("Tiny Rogue", 0, 0);
-				let _ = draw_text("Press A to start", 0, FONT_METRICS.y as i32);
+				Self::centered_paragraph(&[
+					"Tiny Rogue",
+					"Press A to start",
+				]);
 				
 				self.restart_on_a();
 			}
 			GameState::Gameplay(game) => {
 				game.update();
 				if game.is_game_over() {
-					*self = GameState::GameOver(game.score());
+					*self = GameState::GameOver(game.score(), game.player_killer().unwrap_or("The Planet".to_string()));
 					return;
 				}
 				while let Some(message) = LOGGER.next_message() {
@@ -70,11 +99,13 @@ impl GameState {
 				game.renderer.render(&mut ());
 				
 			},
-			GameState::GameOver(s) => {
-				let line = FONT_METRICS.y as i32;
-				let _ = draw_text("Game Over!", 0, 0);
-				let _ = draw_text(format!("You scored: {}", s), 0, line);
-				let _ = draw_text("Press A to restart", 0, line * 2);
+			GameState::GameOver(s, k) => {
+				Self::centered_paragraph(&[
+					"Game Over!".to_string(),
+					format!("You scored: {}", s),
+					format!("Killed by: {}.", k),
+					"Press A to restart".to_string(),
+				]);
 
 				self.restart_on_a();
 			}

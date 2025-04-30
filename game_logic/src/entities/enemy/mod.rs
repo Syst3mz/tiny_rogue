@@ -127,7 +127,7 @@ impl Located<Enemy> {
 
     pub fn update(&mut self, map: &Map, rng: &mut impl Rng, player: &mut Player, impassable_tiles: &HashSet<Vector2<usize>>) {
         self.move_self(map, rng, player, impassable_tiles);
-        self.attack_player(player, map);
+        self.attack_player(player, map)
     }
 }
 

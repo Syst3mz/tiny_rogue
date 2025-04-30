@@ -19,7 +19,6 @@ simple_vector2 = "^2.1.5"
 shared = {path = "shared" }
 
 
-
 # Playdate Package Info
 # doc: https://github.com/boozook/playdate/blob/main/support/build/README.md#metadata
 # official doc: https://sdk.play.date/#pdxinfo

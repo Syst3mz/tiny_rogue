@@ -29,7 +29,7 @@ impl Tile {
 
     pub fn as_char(&self) -> char {
         match self {
-            Tile::Wall => '#',
+            Tile::Wall => '█',
             Tile::Floor => '.',
             Tile::Stairs(_) => 'V',
         }
@@ -83,11 +83,11 @@ impl Map {
             frontier_points.push(point - Vector2::new(0, 2));
         }
 
-        if point.x < MAP_SIZE.x - 2 {
+        if point.x < MAP_SIZE.x - 3 {
             frontier_points.push(point + Vector2::new(2, 0));
         }
         
-        if point.y < MAP_SIZE.y - 2 {
+        if point.y < MAP_SIZE.y - 3 {
             frontier_points.push(point + Vector2::new(0, 2));
         }
         

@@ -1,4 +1,4 @@
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::{format, vec};
 use alloc::vec::Vec;
 use simple_vector2::Vector2;
@@ -33,18 +33,20 @@ pub struct Player {
     pub defense: u16,
     pub levels_completed: u32,
     pub log: Vec<String>,
+    pub killer: Option<String>,
 }
 
 impl Player {
     pub fn new(position: Vector2<usize>) -> Player {
         Self {
             position,
-            health: 100,
+            health: 50,
             score: 0,
             attack: 3,
             defense: 0,
             levels_completed: 0,
             log: vec![],
+            killer: None,
         }
     }
 
@@ -90,7 +92,7 @@ impl Player {
     }
     
     pub fn increase_score(&mut self, by: u32) {
-        self.score += (self.levels_completed / 2).max(1) * by;
+        self.score += ((self.levels_completed + 1) / 2).max(1) * by;
     }
     
     pub fn log_message(&mut self, message: impl AsRef<str>) {
@@ -126,6 +128,10 @@ impl DamageTaker for Player {
         }
         else {
             self.health -= damage;
+        }
+        
+        if self.is_dead() {
+            self.killer = Some(source.as_ref().to_string());
         }
     }
 }

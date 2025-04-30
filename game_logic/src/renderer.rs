@@ -1,6 +1,29 @@
+use core::time::Duration;
 use line_drawing::Bresenham;
 use simple_vector2::Vector2;
 use crate::conversions::Vector2ToTuple;
+
+#[derive(Clone, Copy, Debug)]
+pub enum ScreenSpaceEffectKind {
+    ScreenShake,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScreenSpaceEffect {
+    pub kind: ScreenSpaceEffectKind,
+    pub duration: Duration,
+    pub strength: f32
+}
+
+impl ScreenSpaceEffect {
+    pub fn new(kind: ScreenSpaceEffectKind, duration: Duration, strength: f32) -> Self {
+        Self {
+            kind,
+            duration,
+            strength
+        }
+    }
+}
 
 pub trait Renderer {
     fn get_pixel_mut(&mut self, at: Vector2<usize>) -> &mut char;
@@ -68,4 +91,5 @@ pub trait Renderer {
     }
     fn copy_from_slice_offset(&mut self, offset: usize, source: &[char]);
     fn render<RenderingContext>(&mut self, rendering_context: &mut RenderingContext);
+    fn request_screen_space_effect(&mut self, effect: ScreenSpaceEffect);
 }

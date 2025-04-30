@@ -2,13 +2,13 @@
 extern crate alloc;
 
 use alloc::{format, vec};
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use hashbrown::HashSet;
 use rand::prelude::{IndexedRandom, SmallRng};
 use rand::SeedableRng;
 use simple_vector2::Vector2;
-use shared::constants::{LEVEL_BASE_ENEMY_BUDGET, LEVEL_BASE_ITEM_BUDGET, SCREEN_SIZE};
+use shared::constants::{LEVEL_BASE_ENEMY_BUDGET, LEVEL_BASE_ITEM_BUDGET, SCREEN_SIZE_IN_CHARACTERS};
 use shared::logger::Logger;
 use crate::camera::Camera;
 use crate::damage_taker::DamageTaker;
@@ -64,6 +64,9 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     
     pub fn is_game_over(&self) -> bool {
         self.player.is_dead()
+    }
+    pub fn player_killer(&self) -> Option<String> {
+        self.player.killer.clone()
     }
     pub fn score(&self) -> u32 {
         self.player.score    
@@ -137,7 +140,7 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     
     fn write_lines(&mut self, lines: &[impl AsRef<str>], reversed: bool) {
         let mut row = if reversed { 
-            SCREEN_SIZE.y - 1
+            SCREEN_SIZE_IN_CHARACTERS.y - 1
         } else {
             0
         };
@@ -157,7 +160,7 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     
     fn write_player_stats_to_renderer(&mut self) -> Option<()>{
         let transformed_position = self.transform_player_position()?;
-        let reversed = transformed_position.y < SCREEN_SIZE.y / 2;
+        let reversed = transformed_position.y < SCREEN_SIZE_IN_CHARACTERS.y / 2;
 
         // todo: Make this less horrifying on the performance front.
         let mut lines = vec![];
@@ -178,7 +181,6 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
     }
     fn update_enemies(&mut self) {
         let impassable = self.collect_impassable();
-        
         for enemy_index in 0..self.enemies.len() {
             self.enemies[enemy_index].update(&self.map, &mut self.rng, &mut self.player, &impassable)
         }

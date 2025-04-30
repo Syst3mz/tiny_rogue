@@ -1,5 +1,5 @@
 use simple_vector2::Vector2;
-use shared::constants::{MAP_SIZE, SCREEN_SIZE};
+use shared::constants::{MAP_SIZE, SCREEN_SIZE_IN_CHARACTERS};
 use crate::rectangle::Rectangle;
 
 pub struct Camera {
@@ -14,20 +14,20 @@ impl Camera {
     }
 
     pub fn track_player(&mut self, player_position: Vector2<usize>) {
-        let half_view = SCREEN_SIZE / 2;
+        let half_view = SCREEN_SIZE_IN_CHARACTERS / 2;
 
         // Try to center the camera on the player
         let mut x = player_position.x.saturating_sub(half_view.x);
         let mut y = player_position.y.saturating_sub(half_view.y);
 
         // Clamp so the camera doesn't exceed the map bounds
-        x = x.min(MAP_SIZE.x.saturating_sub(SCREEN_SIZE.x));
-        y = y.min(MAP_SIZE.y.saturating_sub(SCREEN_SIZE.y));
+        x = x.min(MAP_SIZE.x.saturating_sub(SCREEN_SIZE_IN_CHARACTERS.x));
+        y = y.min(MAP_SIZE.y.saturating_sub(SCREEN_SIZE_IN_CHARACTERS.y));
 
         self.position = Vector2::new(x, y);
     }
     pub fn get_camera_bounds(&self) -> Rectangle<usize> {
-       let mut maximal_bounding_box = Rectangle::new(self.position, SCREEN_SIZE);
+       let mut maximal_bounding_box = Rectangle::new(self.position, SCREEN_SIZE_IN_CHARACTERS);
 
         maximal_bounding_box.size.x = maximal_bounding_box.size.x.min(MAP_SIZE.x - self.position.x);
         maximal_bounding_box.size.y = maximal_bounding_box.size.y.min(MAP_SIZE.y - self.position.y);
@@ -39,7 +39,7 @@ impl Camera {
         let x = world_position.x.checked_sub(self.position.x)?;
         let y = world_position.y.checked_sub(self.position.y)?;
 
-        if x >= SCREEN_SIZE.x || y >= SCREEN_SIZE.y {
+        if x >= SCREEN_SIZE_IN_CHARACTERS.x || y >= SCREEN_SIZE_IN_CHARACTERS.y {
             return None;
         }
 
