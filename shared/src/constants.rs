@@ -19,3 +19,4 @@ pub const PLACEMENT_ATTEMPTS: usize = 100;
 pub const MAX_STAIRS: usize = 5;
 pub const LEVEL_BASE_ITEM_BUDGET: usize = 100;
 pub const LEVEL_BASE_ENEMY_BUDGET: usize = 30;
+pub const SQUARE_PLAYER_STAIR_SPAWN_RADIUS: usize = 16 * 16;

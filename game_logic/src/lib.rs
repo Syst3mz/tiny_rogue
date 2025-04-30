@@ -83,11 +83,15 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
         
         let Some(starting_room) = self.map.rooms.choose(&mut self.rng) else {return};
         self.player.position = starting_room.top_left + Vector2::new(1, 1);
+        
         for tile in self.map.grid.cardinal_neighbors(self.player.position) {
             let Some(tile) = tile else { continue };
             let Some(tile) = self.map.grid.get_pixel_mut(tile) else { continue };
             *tile = Tile::Floor;
         }
+        
+        self.map.place_stairs(&self.player.position, &mut self.rng);
+        
         self.camera.track_player(self.player.position);
     }
 
@@ -161,7 +165,12 @@ impl<Render: Renderer, Inp: Input> Game<Render, Inp> {
             lines.push(log.to_string())
         }
         
-        lines.push(format!("Health: {}, Score: {}", self.player.health, self.player.score));
+        lines.push(format!(
+            "Health: {}, Score: {}, Floor: {}", 
+            self.player.health, 
+            self.player.score, 
+            self.player.levels_completed + 1
+        ));
         
 
         self.write_lines(&lines, reversed);

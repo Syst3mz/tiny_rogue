@@ -5,7 +5,7 @@ use line_drawing::Bresenham;
 use rand::prelude::IndexedRandom;
 use rand::Rng;
 use shared::array_2d::Array2d;
-use shared::constants::{DESIRED_ROOM_COVERAGE, MAP_BUFFER_SIZE, MAP_SIZE, MAX_ROOM_SIZE, MAX_STAIRS, MIN_ROOM_SIZE, PLACEMENT_ATTEMPTS};
+use shared::constants::{DESIRED_ROOM_COVERAGE, MAP_BUFFER_SIZE, MAP_SIZE, MAX_ROOM_SIZE, MAX_STAIRS, MIN_ROOM_SIZE, PLACEMENT_ATTEMPTS, SQUARE_PLAYER_STAIR_SPAWN_RADIUS};
 use simple_vector2::Vector2;
 use crate::conversions::Vector2ToTuple;
 use crate::rectangle::Rectangle;
@@ -112,17 +112,33 @@ impl Map {
         
         true
     }
-
+    
     pub fn generate_map(&mut self, rng: &mut impl Rng) {
         self.grid.clear(Wall);
         self.rooms.clear();
         self.generate_maze(rng);
         self.generate_rooms(rng);
+    }
 
-        for _ in 1..=MAX_STAIRS {
+    fn place_stair(&mut self, player_position: &Vector2<usize>, rng: &mut impl Rng) {
+        let mut attempts = PLACEMENT_ATTEMPTS;
+        while attempts > 0 {
             let Some(room) = self.rooms.choose(rng) else { continue; };
-            let stair_index = self.grid.index_at(room.shrink(1).rand_inside(rng));
-            self.grid[stair_index] = Tile::Stairs(rng.random())
+            let random_position_in_shrank_room = room.shrink(1).rand_inside(rng);
+
+            if random_position_in_shrank_room.square_distance(player_position) >= SQUARE_PLAYER_STAIR_SPAWN_RADIUS {
+                let stair_index = self.grid.index_at(random_position_in_shrank_room);
+                self.grid[stair_index] = Tile::Stairs(rng.random());
+                return;
+            }
+
+            attempts -= 1;
+        }            
+    }
+    
+    pub fn place_stairs(&mut self, player_position: &Vector2<usize>, rng: &mut impl Rng) {
+        for _ in 0..MAX_STAIRS {
+            self.place_stair(player_position, rng)
         }
     }
     
